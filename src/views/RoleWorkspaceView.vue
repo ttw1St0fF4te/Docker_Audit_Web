@@ -39,8 +39,8 @@ onMounted(loadWorkspace)
 </script>
 
 <template>
-  <main class="workspace-shell">
-    <header class="workspace-hero">
+  <section class="page-shell">
+    <header class="surface-card workspace-hero">
       <div>
         <p class="eyebrow">{{ roleBadge }}</p>
         <h1>{{ workspace?.title || 'Загрузка рабочего пространства...' }}</h1>
@@ -57,13 +57,13 @@ onMounted(loadWorkspace)
       </div>
     </header>
 
-    <section v-if="error" class="workspace-panel workspace-panel--error">
+    <section v-if="error" class="surface-card workspace-panel workspace-panel--error">
       <h2>Доступ не получен</h2>
       <p>{{ error }}</p>
     </section>
 
     <section v-else class="workspace-grid">
-      <article class="workspace-panel">
+      <article class="surface-card workspace-panel">
         <div class="panel-head">
           <h2>Доступные функции</h2>
           <span class="pill">{{ loading ? 'LOADING' : workspace?.role || authStore.user?.role }}</span>
@@ -73,7 +73,7 @@ onMounted(loadWorkspace)
         </ul>
       </article>
 
-      <article class="workspace-panel">
+      <article class="surface-card workspace-panel">
         <div class="panel-head">
           <h2>Следующие шаги разработки</h2>
           <span class="pill">ROADMAP</span>
@@ -83,5 +83,5 @@ onMounted(loadWorkspace)
         </ol>
       </article>
     </section>
-  </main>
+  </section>
 </template>
