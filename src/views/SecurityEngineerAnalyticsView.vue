@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  generateAnalyticsReport,
   getAnalyticsOverview,
   getSecurityScoreTrend,
   getSeverityTrend,
@@ -11,6 +12,8 @@ import {
 
 const loading = ref(false)
 const error = ref('')
+const reportLoading = ref(false)
+const reportResult = ref('')
 
 const filters = reactive({
   from: '',
@@ -21,6 +24,15 @@ const filters = reactive({
 
 const topLimit = 10
 const hosts = ref([])
+
+const reportScopes = [
+  { value: 'ALL', label: 'Общий отчет (все дашборды)' },
+  { value: 'OVERVIEW', label: 'Сводная аналитика' },
+  { value: 'SEVERITY_TREND', label: 'Динамика нарушений по severity' },
+  { value: 'SECURITY_SCORE_TREND', label: 'Динамика индекса защищенности' },
+  { value: 'TOP_HOSTS', label: 'Топ проблемных хостов' },
+  { value: 'TOP_RULES', label: 'Топ провальных правил' },
+]
 
 const overview = ref(null)
 const severityTrend = ref([])
@@ -56,6 +68,18 @@ function toIsoFromLocal(localValue) {
   return new Date(localValue).toISOString()
 }
 
+function validateDateRange() {
+  if (filters.from && filters.to) {
+    const fromMs = new Date(filters.from).getTime()
+    const toMs = new Date(filters.to).getTime()
+    if (!Number.isNaN(fromMs) && !Number.isNaN(toMs) && fromMs >= toMs) {
+      error.value = 'Период задан некорректно: дата "с" должна быть раньше даты "по"'
+      return false
+    }
+  }
+  return true
+}
+
 function buildParams(includeLimit = false) {
   const params = {}
 
@@ -83,6 +107,10 @@ function buildParams(includeLimit = false) {
 }
 
 async function loadAnalytics() {
+  if (!validateDateRange()) {
+    return
+  }
+
   loading.value = true
   error.value = ''
 
@@ -107,6 +135,32 @@ async function loadAnalytics() {
     error.value = requestError.response?.data?.message || 'Не удалось загрузить аналитику'
   } finally {
     loading.value = false
+  }
+}
+
+async function generateReport(scope, format) {
+  if (!validateDateRange()) {
+    return
+  }
+
+  reportLoading.value = true
+  reportResult.value = ''
+  error.value = ''
+
+  try {
+    const response = await generateAnalyticsReport({
+      scope,
+      format,
+      from: buildParams().from,
+      to: buildParams().to,
+      bucket: buildParams().bucket,
+      hostId: buildParams().hostId,
+    })
+    reportResult.value = `Файл создан: ${response.savedPath}`
+  } catch (requestError) {
+    error.value = requestError.response?.data?.message || 'Не удалось сформировать отчет'
+  } finally {
+    reportLoading.value = false
   }
 }
 
@@ -296,8 +350,22 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
 
     <article class="surface-card muted-note">
       <h2>Отчеты</h2>
-      <p>Здесь будет экспорт отчетов (PDF/CSV) в следующей итерации.</p>
-      <p class="muted-block">Метрика "Непройдено" считается как количество правил с `passed = 0`.</p>
+      <p>Сформируйте общий отчет или отчет по выбранному дашборду в формате PDF/CSV.</p>
+      <div class="report-grid">
+        <div v-for="scope in reportScopes" :key="scope.value" class="report-row">
+          <span>{{ scope.label }}</span>
+          <div class="report-actions">
+            <button class="ghost-button" type="button" :disabled="reportLoading" @click="generateReport(scope.value, 'CSV')">
+              CSV
+            </button>
+            <button class="primary-button" type="button" :disabled="reportLoading" @click="generateReport(scope.value, 'PDF')">
+              PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p v-if="reportResult" class="inline-success">{{ reportResult }}</p>
     </article>
   </section>
 </template>

@@ -37,6 +37,11 @@ export async function getRecentAudits() {
   return data
 }
 
+export async function searchAudits(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/audits`, { params })
+  return data
+}
+
 export async function getAuditSummary(scanId) {
   const { data } = await http.get(`${SECURITY_PREFIX}/audits/${scanId}/summary`)
   return data
@@ -74,5 +79,10 @@ export async function getTopHosts(params = {}) {
 
 export async function getTopRules(params = {}) {
   const { data } = await http.get(`${SECURITY_PREFIX}/analytics/top-rules`, { params })
+  return data
+}
+
+export async function generateAnalyticsReport(payload) {
+  const { data } = await http.post(`${SECURITY_PREFIX}/analytics/reports/generate`, payload)
   return data
 }

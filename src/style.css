@@ -216,6 +216,7 @@ h1 {
   display: inline-flex;
   align-items: flex-end;
   min-height: 72px;
+  gap: 8px;
 }
 
 .stats-grid,
@@ -527,6 +528,29 @@ h1 {
 
 .muted-note p {
   margin-top: 10px;
+}
+
+.report-grid {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.report-actions {
+  display: inline-flex;
+  gap: 8px;
 }
 
 .single-mobile {

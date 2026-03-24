@@ -7,6 +7,7 @@ const saving = ref(false)
 const runningAudit = ref(false)
 const error = ref('')
 const success = ref('')
+const fieldError = ref('')
 const hosts = ref([])
 const schedules = ref([])
 
@@ -47,6 +48,37 @@ function buildCronExpression() {
     throw new Error('Для дней интервал должен быть от 1 до 31')
   }
   return `0 0 0 */${every} * *`
+}
+
+function validateForm() {
+  if (!form.hostId) {
+    fieldError.value = 'Выберите Docker-хост'
+    return false
+  }
+
+  const every = Number(form.everyValue)
+  if (!Number.isInteger(every) || every < 1) {
+    fieldError.value = 'Введите целое число от 1 в поле интервала'
+    return false
+  }
+
+  if (form.everyUnit === 'MINUTES' && every > 59) {
+    fieldError.value = 'Для минут допустим интервал от 1 до 59'
+    return false
+  }
+
+  if (form.everyUnit === 'HOURS' && every > 24) {
+    fieldError.value = 'Для часов допустим интервал от 1 до 24'
+    return false
+  }
+
+  if (form.everyUnit === 'DAYS' && every > 31) {
+    fieldError.value = 'Для дней допустим интервал от 1 до 31'
+    return false
+  }
+
+  fieldError.value = ''
+  return true
 }
 
 function describeCron(cronExpression) {
@@ -101,8 +133,7 @@ async function loadData() {
 }
 
 async function submitSchedule() {
-  if (!form.hostId) {
-    error.value = 'Выберите Docker host'
+  if (!validateForm()) {
     return
   }
 
@@ -128,7 +159,7 @@ async function submitSchedule() {
 
 async function startAudit() {
   if (!form.hostId) {
-    error.value = 'Выберите Docker host для запуска аудита'
+    error.value = 'Выберите Docker-хост для запуска аудита'
     return
   }
 
@@ -177,7 +208,7 @@ onMounted(loadData)
           <label class="field-inline stacked">
             Как часто запускать аудит
             <div class="schedule-interval-row">
-              <input v-model.number="form.everyValue" type="number" min="1" />
+              <input v-model.number="form.everyValue" type="number" min="1" @input="validateForm" />
               <select v-model="form.everyUnit">
                 <option v-for="unit in scheduleUnits" :key="unit.value" :value="unit.value">{{ unit.label }}</option>
               </select>
@@ -200,6 +231,7 @@ onMounted(loadData)
         </form>
 
         <p v-if="error" class="inline-error">{{ error }}</p>
+        <p v-if="fieldError" class="inline-error">{{ fieldError }}</p>
         <p v-if="success" class="inline-success">{{ success }}</p>
         <p class="muted-block">Ручной запуск выполняется только для выбранного Docker host.</p>
       </article>
