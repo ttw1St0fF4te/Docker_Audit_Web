@@ -28,7 +28,11 @@ export async function upsertSchedule(payload) {
 }
 
 export async function runManualAudit(hostId) {
-  const { data } = await http.post(`${SECURITY_PREFIX}/audits/run`, { hostId })
+  const { data } = await http.post(
+    `${SECURITY_PREFIX}/audits/run`,
+    { hostId },
+    { timeout: 120000 },
+  )
   return data
 }
 
