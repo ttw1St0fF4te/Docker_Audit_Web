@@ -17,12 +17,17 @@ const navByRole = {
     { to: '/security-engineer/notifications', label: 'Уведомления' },
   ],
   DEVELOPER: [{ to: '/developer', label: 'Рабочая зона' }],
-  SUPER_ADMIN: [{ to: '/super-admin', label: 'Рабочая зона' }],
+  SUPER_ADMIN: [
+    { to: '/super-admin/users', label: 'Пользователи' },
+    { to: '/super-admin/audit-logs', label: 'Аудит-лог' },
+    { to: '/super-admin/hosts', label: 'Docker хосты' },
+  ],
 }
 
 const roleNavItems = computed(() => {
   const role = authStore.user?.role
-  return role ? navByRole[role] || [] : []
+  const roleItems = role ? navByRole[role] || [] : []
+  return authStore.isAuthenticated ? [...roleItems, { to: '/profile', label: 'Профиль' }] : []
 })
 
 async function logout() {

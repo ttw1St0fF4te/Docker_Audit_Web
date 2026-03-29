@@ -65,14 +65,17 @@ onMounted(loadData)
       <article class="surface-card stat-card">
         <h3>Нарушений CRITICAL</h3>
         <p>{{ toNumber(overview?.criticalCount) }}</p>
+        <small class="card-hint">За последние 7 дней</small>
       </article>
       <article class="surface-card stat-card">
         <h3>Нарушений HIGH</h3>
         <p>{{ toNumber(overview?.highCount) }}</p>
+        <small class="card-hint">За последние 7 дней</small>
       </article>
       <article class="surface-card stat-card">
         <h3>Security Score</h3>
         <p>{{ Number(overview?.securityScore || 0).toFixed(2) }}%</p>
+        <small class="card-hint">За последние 7 дней</small>
       </article>
     </section>
 

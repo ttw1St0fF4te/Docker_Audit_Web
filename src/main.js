@@ -15,7 +15,7 @@ const authStore = useAuthStore(pinia)
 router.beforeEach(async (to) => {
 	await authStore.restoreSession()
 
-	if (to.name === 'login' && authStore.isAuthenticated) {
+	if ((to.name === 'login' || to.name === 'activate-password') && authStore.isAuthenticated) {
 		return authStore.homePath
 	}
 

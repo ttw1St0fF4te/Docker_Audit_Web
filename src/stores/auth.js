@@ -1,17 +1,19 @@
 import { defineStore } from 'pinia'
 import { clearAccessToken, getAccessToken, http, setAccessToken } from '../api/http'
+import { activatePassword as activatePasswordRequest } from '../api/auth'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     accessToken: null,
     tokenExpiresAt: '',
+    pendingActivationIdentifier: '',
     loading: false,
     initialized: false,
     error: '',
   }),
   getters: {
-    isAuthenticated: (state) => Boolean(state.user),
+    isAuthenticated: (state) => Boolean(state.user && state.accessToken),
     homePath: (state) => state.user?.homePath || '/login',
   },
   actions: {
@@ -46,12 +48,16 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials) {
       this.loading = true
       this.error = ''
+      this.pendingActivationIdentifier = ''
 
       try {
         const { data } = await http.post('/auth/login', credentials)
         this.user = data
         this.accessToken = data.accessToken || null
         this.tokenExpiresAt = data.expiresAt || ''
+        if (data.authStatus === 'PASSWORD_CHANGE_REQUIRED') {
+          this.pendingActivationIdentifier = credentials.username || ''
+        }
         if (data.accessToken) {
           setAccessToken(data.accessToken)
         }
@@ -69,6 +75,28 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
       }
     },
+    async activatePassword(payload) {
+      this.loading = true
+      this.error = ''
+
+      try {
+        const data = await activatePasswordRequest(payload)
+        this.user = data
+        this.accessToken = data.accessToken || null
+        this.tokenExpiresAt = data.expiresAt || ''
+        this.pendingActivationIdentifier = ''
+        if (data.accessToken) {
+          setAccessToken(data.accessToken)
+        }
+        this.initialized = true
+        return data
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Не удалось активировать пароль'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
     async logout() {
       try {
         await http.post('/auth/logout')
@@ -76,6 +104,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
         this.accessToken = null
         this.tokenExpiresAt = ''
+        this.pendingActivationIdentifier = ''
         this.error = ''
         this.initialized = true
         clearAccessToken()

@@ -2,6 +2,16 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import RoleWorkspaceView from '../views/RoleWorkspaceView.vue'
 import ForbiddenView from '../views/ForbiddenView.vue'
+import ActivatePasswordView from '../views/ActivatePasswordView.vue'
+import RecoveryView from '../views/RecoveryView.vue'
+import RecoveryPasswordResetView from '../views/RecoveryPasswordResetView.vue'
+import RecoveryEmailCodeRequestView from '../views/RecoveryEmailCodeRequestView.vue'
+import RecoveryEmailCodeConfirmView from '../views/RecoveryEmailCodeConfirmView.vue'
+import RecoveryEmailIdentityView from '../views/RecoveryEmailIdentityView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import SuperAdminUsersView from '../views/SuperAdminUsersView.vue'
+import SuperAdminAuditLogsView from '../views/SuperAdminAuditLogsView.vue'
+import SuperAdminDockerHostsView from '../views/SuperAdminDockerHostsView.vue'
 import SecurityEngineerOverviewView from '../views/SecurityEngineerOverviewView.vue'
 import SecurityEngineerRulesView from '../views/SecurityEngineerRulesView.vue'
 import SecurityEngineerSchedulesView from '../views/SecurityEngineerSchedulesView.vue'
@@ -18,6 +28,44 @@ const routes = [
     path: '/login',
     name: 'login',
     component: LoginView,
+  },
+  {
+    path: '/activate-password',
+    name: 'activate-password',
+    component: ActivatePasswordView,
+  },
+  {
+    path: '/recovery',
+    name: 'recovery',
+    component: RecoveryView,
+  },
+  {
+    path: '/recovery/password-reset',
+    name: 'recovery-password-reset',
+    component: RecoveryPasswordResetView,
+  },
+  {
+    path: '/recovery/email-code/request',
+    name: 'recovery-email-code-request',
+    component: RecoveryEmailCodeRequestView,
+  },
+  {
+    path: '/recovery/email-code/confirm',
+    name: 'recovery-email-code-confirm',
+    component: RecoveryEmailCodeConfirmView,
+  },
+  {
+    path: '/recovery/email-identity',
+    name: 'recovery-email-identity',
+    component: RecoveryEmailIdentityView,
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: ProfileView,
+    meta: {
+      requiresAuth: true,
+    },
   },
   {
     path: '/security-engineer',
@@ -89,12 +137,33 @@ const routes = [
   },
   {
     path: '/super-admin',
-    name: 'super-admin',
-    component: RoleWorkspaceView,
+    redirect: '/super-admin/users',
+  },
+  {
+    path: '/super-admin/users',
+    name: 'super-admin-users',
+    component: SuperAdminUsersView,
     meta: {
       requiresAuth: true,
       role: 'SUPER_ADMIN',
-      endpoint: '/pages/super-admin',
+    },
+  },
+  {
+    path: '/super-admin/audit-logs',
+    name: 'super-admin-audit-logs',
+    component: SuperAdminAuditLogsView,
+    meta: {
+      requiresAuth: true,
+      role: 'SUPER_ADMIN',
+    },
+  },
+  {
+    path: '/super-admin/hosts',
+    name: 'super-admin-hosts',
+    component: SuperAdminDockerHostsView,
+    meta: {
+      requiresAuth: true,
+      role: 'SUPER_ADMIN',
     },
   },
   {
