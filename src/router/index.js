@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
-import RoleWorkspaceView from '../views/RoleWorkspaceView.vue'
 import ForbiddenView from '../views/ForbiddenView.vue'
 import ActivatePasswordView from '../views/ActivatePasswordView.vue'
 import RecoveryView from '../views/RecoveryView.vue'
@@ -18,6 +17,8 @@ import SecurityEngineerSchedulesView from '../views/SecurityEngineerSchedulesVie
 import SecurityEngineerScansView from '../views/SecurityEngineerScansView.vue'
 import SecurityEngineerAnalyticsView from '../views/SecurityEngineerAnalyticsView.vue'
 import SecurityEngineerNotificationsView from '../views/SecurityEngineerNotificationsView.vue'
+import DeveloperDashboardView from '../views/DeveloperDashboardView.vue'
+import DeveloperNotificationsView from '../views/DeveloperNotificationsView.vue'
 
 const routes = [
   {
@@ -127,12 +128,24 @@ const routes = [
   },
   {
     path: '/developer',
-    name: 'developer',
-    component: RoleWorkspaceView,
+    redirect: '/developer/dashboard',
+  },
+  {
+    path: '/developer/dashboard',
+    name: 'developer-dashboard',
+    component: DeveloperDashboardView,
     meta: {
       requiresAuth: true,
       role: 'DEVELOPER',
-      endpoint: '/pages/developer',
+    },
+  },
+  {
+    path: '/developer/notifications',
+    name: 'developer-notifications',
+    component: DeveloperNotificationsView,
+    meta: {
+      requiresAuth: true,
+      role: 'DEVELOPER',
     },
   },
   {

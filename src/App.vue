@@ -16,7 +16,10 @@ const navByRole = {
     { to: '/security-engineer/analytics', label: 'Тренды' },
     { to: '/security-engineer/notifications', label: 'Уведомления' },
   ],
-  DEVELOPER: [{ to: '/developer', label: 'Рабочая зона' }],
+  DEVELOPER: [
+    { to: '/developer/dashboard', label: 'Дэшборд' },
+    { to: '/developer/notifications', label: 'Уведомления' },
+  ],
   SUPER_ADMIN: [
     { to: '/super-admin/users', label: 'Пользователи' },
     { to: '/super-admin/audit-logs', label: 'Аудит-лог' },
