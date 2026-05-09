@@ -57,10 +57,10 @@ onMounted(loadSettings)
   <section class="page-shell">
     <div class="page-head compact">
       <h1>Настройки уведомлений</h1>
-      <p class="lead">Управление порогом severity для уведомлений разработчикам и заглушка каналов доставки.</p>
+      <p class="lead">Управление порогом severity для уведомлений разработчикам.</p>
     </div>
 
-    <section class="content-grid single-mobile">
+    <section class="content-grid single-mobile notifications-layout">
       <article class="surface-card">
         <div class="section-head">
           <h2>Severity threshold</h2>
@@ -93,18 +93,7 @@ onMounted(loadSettings)
         <p v-if="success" class="inline-success">{{ success }}</p>
       </article>
 
-      <article class="surface-card muted-note">
-        <div class="section-head">
-          <h2>Каналы уведомлений</h2>
-          <span class="pill">BACKLOG</span>
-        </div>
-        <p>Заглушка: почта, Telegram и webhooks будут добавлены в следующем этапе.</p>
-        <ul class="flat-list">
-          <li>Email digest для ответственных команд</li>
-          <li>Telegram-алерты для CRITICAL</li>
-          <li>Webhook в CI/CD или SIEM</li>
-        </ul>
-      </article>
+      
     </section>
   </section>
 </template>

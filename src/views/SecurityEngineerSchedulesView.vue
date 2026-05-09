@@ -1,6 +1,14 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { listHosts, listSchedules, runManualAudit, upsertSchedule } from '../api/securityEngineer'
+import { computed, onMounted, reactive, ref } from 'vue'
+import {
+  listCveSchedules,
+  listHosts,
+  listSchedules,
+  runManualAudit,
+  runManualCveAudit,
+  upsertCveSchedule,
+  upsertSchedule,
+} from '../api/securityEngineer'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -10,6 +18,8 @@ const success = ref('')
 const fieldError = ref('')
 const hosts = ref([])
 const schedules = ref([])
+const cveSchedules = ref([])
+const runningAction = ref('')
 
 const form = reactive({
   hostId: '',
@@ -110,6 +120,12 @@ function formatDateTime(value) {
   return new Date(value).toLocaleString('ru-RU')
 }
 
+const combinedSchedules = computed(() => {
+  const cis = (schedules.value || []).map((item) => ({ ...item, scanType: 'CIS' }))
+  const cve = (cveSchedules.value || []).map((item) => ({ ...item, scanType: 'CVE' }))
+  return [...cis, ...cve].sort((a, b) => (a.hostId || 0) - (b.hostId || 0))
+})
+
 async function loadData() {
   loading.value = true
   error.value = ''
@@ -122,6 +138,9 @@ async function loadData() {
     hosts.value = hostsData.items || []
     schedules.value = schedulesData.items || []
 
+    const cveSchedulesData = await listCveSchedules({ page: 0, size: 200 })
+    cveSchedules.value = cveSchedulesData.items || []
+
     if (!form.hostId && hosts.value.length) {
       form.hostId = String(hosts.value[0].id)
     }
@@ -132,7 +151,7 @@ async function loadData() {
   }
 }
 
-async function submitSchedule() {
+async function submitSchedule(scanType) {
   if (!validateForm()) {
     return
   }
@@ -143,12 +162,18 @@ async function submitSchedule() {
 
   try {
     const cronExpression = buildCronExpression()
-    await upsertSchedule({
+    const payload = {
       hostId: Number(form.hostId),
       cronExpression,
       active: form.active,
-    })
-    success.value = 'Расписание сохранено'
+    }
+    if (scanType === 'CVE') {
+      await upsertCveSchedule(payload)
+      success.value = 'CVE-расписание сохранено'
+    } else {
+      await upsertSchedule(payload)
+      success.value = 'CIS-расписание сохранено'
+    }
     await loadData()
   } catch (requestError) {
     error.value = requestError.response?.data?.message || requestError.message || 'Не удалось сохранить расписание'
@@ -157,23 +182,37 @@ async function submitSchedule() {
   }
 }
 
-async function startAudit() {
+async function startAudit(scanType) {
   if (!form.hostId) {
     error.value = 'Выберите Docker-хост для запуска аудита'
     return
   }
 
   runningAudit.value = true
+  runningAction.value = scanType
   success.value = ''
   error.value = ''
 
   try {
-    const response = await runManualAudit(Number(form.hostId))
-    success.value = `Скан #${response.scanId} запущен (${response.status})`
+    const hostId = Number(form.hostId)
+    if (scanType === 'CVE') {
+      const response = await runManualCveAudit(hostId)
+      success.value = `CVE-скан #${response.scanId} запущен (${response.status})`
+    } else if (scanType === 'BOTH') {
+      const [cisResponse, cveResponse] = await Promise.all([
+        runManualAudit(hostId),
+        runManualCveAudit(hostId),
+      ])
+      success.value = `Запуск CIS #${cisResponse.scanId} (${cisResponse.status}) и CVE #${cveResponse.scanId} (${cveResponse.status})`
+    } else {
+      const response = await runManualAudit(hostId)
+      success.value = `CIS-скан #${response.scanId} запущен (${response.status})`
+    }
   } catch (requestError) {
     error.value = requestError.response?.data?.message || 'Не удалось запустить аудит'
   } finally {
     runningAudit.value = false
+    runningAction.value = ''
   }
 }
 
@@ -194,7 +233,7 @@ onMounted(loadData)
           <span class="pill">SCHEDULER</span>
         </div>
 
-        <form class="form-grid" @submit.prevent="submitSchedule">
+        <form class="form-grid" @submit.prevent>
           <label class="field-inline stacked">
             Docker-хост
             <select v-model="form.hostId">
@@ -221,11 +260,23 @@ onMounted(loadData)
           </label>
 
           <div class="button-row">
-            <button class="primary-button" :disabled="saving" type="submit">
-              {{ saving ? 'Сохранение...' : 'Сохранить расписание' }}
+            <button class="primary-button" :disabled="saving" type="button" @click="submitSchedule('CIS')">
+              {{ saving ? 'Сохранение...' : 'Сохранить CIS расписание' }}
             </button>
-            <button class="ghost-button" :disabled="runningAudit" type="button" @click="startAudit">
-              {{ runningAudit ? 'Запуск...' : 'Запустить аудит вручную' }}
+            <button class="ghost-button" :disabled="saving" type="button" @click="submitSchedule('CVE')">
+              {{ saving ? 'Сохранение...' : 'Сохранить CVE расписание' }}
+            </button>
+          </div>
+
+          <div class="button-row">
+            <button class="primary-button" :disabled="runningAudit" type="button" @click="startAudit('CIS')">
+              {{ runningAudit && runningAction === 'CIS' ? 'Запуск...' : 'Запустить CIS скан' }}
+            </button>
+            <button class="ghost-button" :disabled="runningAudit" type="button" @click="startAudit('CVE')">
+              {{ runningAudit && runningAction === 'CVE' ? 'Запуск...' : 'Запустить CVE скан' }}
+            </button>
+            <button class="ghost-button" :disabled="runningAudit" type="button" @click="startAudit('BOTH')">
+              {{ runningAudit && runningAction === 'BOTH' ? 'Запуск...' : 'Запустить оба' }}
             </button>
           </div>
         </form>
@@ -249,6 +300,7 @@ onMounted(loadData)
             <thead>
               <tr>
                 <th>ID</th>
+                <th>Тип</th>
                 <th>Хост</th>
                 <th>Интервал</th>
                 <th>Активно</th>
@@ -257,16 +309,17 @@ onMounted(loadData)
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in schedules" :key="item.id">
+              <tr v-for="item in combinedSchedules" :key="`${item.scanType}-${item.id}`">
                 <td>#{{ item.id }}</td>
+                <td>{{ item.scanType }}</td>
                 <td>{{ item.hostId }}</td>
                 <td>{{ describeCron(item.cronExpression) }}</td>
                 <td>{{ item.active ? 'Да' : 'Нет' }}</td>
                 <td>{{ formatDateTime(item.lastRun) }}</td>
                 <td>{{ formatDateTime(item.nextRun) }}</td>
               </tr>
-              <tr v-if="!schedules.length && !loading">
-                <td colspan="6">Расписаний пока нет</td>
+              <tr v-if="!combinedSchedules.length && !loading">
+                <td colspan="7">Расписаний пока нет</td>
               </tr>
             </tbody>
           </table>

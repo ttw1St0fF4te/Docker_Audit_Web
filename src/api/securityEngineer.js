@@ -22,8 +22,18 @@ export async function listSchedules(params = {}) {
   return data
 }
 
+export async function listCveSchedules(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/schedules`, { params })
+  return data
+}
+
 export async function upsertSchedule(payload) {
   const { data } = await http.post(`${SECURITY_PREFIX}/schedules`, payload)
+  return data
+}
+
+export async function upsertCveSchedule(payload) {
+  const { data } = await http.post(`${SECURITY_PREFIX}/cve/schedules`, payload)
   return data
 }
 
@@ -32,6 +42,15 @@ export async function runManualAudit(hostId) {
     `${SECURITY_PREFIX}/audits/run`,
     { hostId },
     { timeout: 120000 },
+  )
+  return data
+}
+
+export async function runManualCveAudit(hostId) {
+  const { data } = await http.post(
+    `${SECURITY_PREFIX}/cve/audits/run`,
+    { hostId },
+    { timeout: 600000 },
   )
   return data
 }
@@ -46,8 +65,18 @@ export async function searchAudits(params = {}) {
   return data
 }
 
+export async function searchCveAudits(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/audits`, { params })
+  return data
+}
+
 export async function getAuditSummary(scanId) {
   const { data } = await http.get(`${SECURITY_PREFIX}/audits/${scanId}/summary`)
+  return data
+}
+
+export async function getCveAuditSummary(scanId) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/audits/${scanId}/summary`)
   return data
 }
 
@@ -66,8 +95,18 @@ export async function getAnalyticsOverview(params = {}) {
   return data
 }
 
+export async function getCveAnalyticsOverview(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/analytics/overview`, { params })
+  return data
+}
+
 export async function getSeverityTrend(params = {}) {
   const { data } = await http.get(`${SECURITY_PREFIX}/analytics/severity-trend`, { params })
+  return data
+}
+
+export async function getCveSeverityTrend(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/analytics/severity-trend`, { params })
   return data
 }
 
@@ -76,13 +115,28 @@ export async function getSecurityScoreTrend(params = {}) {
   return data
 }
 
+export async function getCveSecurityScoreTrend(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/analytics/security-score-trend`, { params })
+  return data
+}
+
 export async function getTopHosts(params = {}) {
   const { data } = await http.get(`${SECURITY_PREFIX}/analytics/top-hosts`, { params })
   return data
 }
 
+export async function getCveTopHosts(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/analytics/top-hosts`, { params })
+  return data
+}
+
 export async function getTopRules(params = {}) {
   const { data } = await http.get(`${SECURITY_PREFIX}/analytics/top-rules`, { params })
+  return data
+}
+
+export async function getCveTopRules(params = {}) {
+  const { data } = await http.get(`${SECURITY_PREFIX}/cve/analytics/top-rules`, { params })
   return data
 }
 

@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { getAuditSummary, searchAudits } from '../api/securityEngineer'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { getAuditSummary, getCveAuditSummary, searchAudits, searchCveAudits } from '../api/securityEngineer'
 
 const loading = ref(false)
 const summaryLoading = ref(false)
@@ -9,8 +9,17 @@ const scans = ref([])
 const selectedScanId = ref(null)
 const summary = ref(null)
 const total = ref(0)
+const appliedScanType = ref('CIS')
+
+const scanTypes = [
+  { value: 'CIS', label: 'CIS' },
+  { value: 'CVE', label: 'CVE' },
+]
+
+const isCve = computed(() => appliedScanType.value === 'CVE')
 
 const filters = reactive({
+  scanType: 'CIS',
   page: 0,
   size: 20,
   scanId: '',
@@ -108,9 +117,12 @@ async function loadScans() {
   error.value = ''
 
   try {
-    const response = await searchAudits(buildParams())
+    const response = filters.scanType === 'CVE'
+      ? await searchCveAudits(buildParams())
+      : await searchAudits(buildParams())
     scans.value = response.items || []
     total.value = Number(response.total || 0)
+    appliedScanType.value = filters.scanType
   } catch (requestError) {
     error.value = requestError.response?.data?.message || 'Не удалось загрузить историю сканов'
   } finally {
@@ -158,7 +170,9 @@ async function selectScan(scanId) {
   error.value = ''
 
   try {
-    summary.value = await getAuditSummary(scanId)
+    summary.value = appliedScanType.value === 'CVE'
+      ? await getCveAuditSummary(scanId)
+      : await getAuditSummary(scanId)
   } catch (requestError) {
     error.value = requestError.response?.data?.message || 'Не удалось загрузить сводку скана'
   } finally {
@@ -183,6 +197,13 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
 
     <article class="surface-card">
       <div class="filters-row wrap">
+        <label class="field-inline stacked">
+          Тип сканирования
+          <select v-model="filters.scanType">
+            <option v-for="type in scanTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+          </select>
+        </label>
+
         <label class="field-inline stacked">
           ID скана
           <input v-model="filters.scanId" type="number" min="1" placeholder="Например, 42" />
@@ -326,6 +347,10 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
           <div class="summary-item">
             <span>LOW</span>
             <strong>{{ summary.lowCount }}</strong>
+          </div>
+          <div v-if="isCve" class="summary-item">
+            <span>UNKNOWN</span>
+            <strong>{{ summary.unknownCount }}</strong>
           </div>
         </div>
 

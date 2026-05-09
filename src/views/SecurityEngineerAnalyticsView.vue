@@ -3,6 +3,11 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import {
   generateAnalyticsReport,
   getAnalyticsOverview,
+  getCveAnalyticsOverview,
+  getCveSecurityScoreTrend,
+  getCveSeverityTrend,
+  getCveTopHosts,
+  getCveTopRules,
   getSecurityScoreTrend,
   getSeverityTrend,
   getTopHosts,
@@ -22,6 +27,13 @@ const filters = reactive({
   hostId: '',
 })
 
+const selectedScanType = ref('CIS')
+const appliedScanType = ref('CIS')
+const scanTypes = [
+  { value: 'CIS', label: 'CIS (нарушения конфигураций)' },
+  { value: 'CVE', label: 'CVE (уязвимости образов)' },
+]
+
 const topLimit = 10
 const hosts = ref([])
 
@@ -39,6 +51,13 @@ const severityTrend = ref([])
 const scoreTrend = ref([])
 const topHosts = ref([])
 const topRules = ref([])
+
+const isCve = computed(() => appliedScanType.value === 'CVE')
+const reportsAvailable = computed(() => appliedScanType.value === 'CIS')
+const overviewTotalLabel = computed(() => (isCve.value ? 'Всего уязвимостей' : 'Всего непройденных проверок'))
+const topRulesTitle = computed(() => (isCve.value ? 'Топ-10 уязвимостей' : 'Топ-10 провальных правил'))
+const trendTitle = computed(() => (isCve.value ? 'Динамика уязвимостей по severity' : 'Динамика нарушений по уровням severity'))
+const scoreTitle = computed(() => (isCve.value ? 'Динамика CVE-индекса риска' : 'Динамика индекса защищенности'))
 
 const maxSeverityTotal = computed(() => {
   const totals = severityTrend.value.map((item) => Number(item.totalFailed || 0))
@@ -118,12 +137,28 @@ async function loadAnalytics() {
     const hostsData = await listHosts({ page: 0, size: 200, active: true })
     hosts.value = hostsData.items || []
 
+    const analyticsApi = selectedScanType.value === 'CVE'
+      ? {
+          overview: getCveAnalyticsOverview,
+          severity: getCveSeverityTrend,
+          score: getCveSecurityScoreTrend,
+          topHosts: getCveTopHosts,
+          topRules: getCveTopRules,
+        }
+      : {
+          overview: getAnalyticsOverview,
+          severity: getSeverityTrend,
+          score: getSecurityScoreTrend,
+          topHosts: getTopHosts,
+          topRules: getTopRules,
+        }
+
     const [overviewData, severityData, scoreData, topHostsData, rulesData] = await Promise.all([
-      getAnalyticsOverview(buildParams()),
-      getSeverityTrend(buildParams()),
-      getSecurityScoreTrend(buildParams()),
-      getTopHosts(buildParams(true)),
-      getTopRules(buildParams(true)),
+      analyticsApi.overview(buildParams()),
+      analyticsApi.severity(buildParams()),
+      analyticsApi.score(buildParams()),
+      analyticsApi.topHosts(buildParams(true)),
+      analyticsApi.topRules(buildParams(true)),
     ])
 
     overview.value = overviewData
@@ -131,6 +166,7 @@ async function loadAnalytics() {
     scoreTrend.value = scoreData.items || []
     topHosts.value = topHostsData.items || []
     topRules.value = rulesData.items || []
+    appliedScanType.value = selectedScanType.value
   } catch (requestError) {
     error.value = requestError.response?.data?.message || 'Не удалось загрузить аналитику'
   } finally {
@@ -180,6 +216,15 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
     <article class="surface-card">
       <div class="filters-row wrap">
         <label class="field-inline stacked">
+          Тип сканирования
+          <select v-model="selectedScanType">
+            <option v-for="type in scanTypes" :key="type.value" :value="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field-inline stacked">
           Период с
           <input v-model="filters.from" type="datetime-local" />
         </label>
@@ -223,7 +268,7 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
         <p>{{ Number(overview?.securityScore || 0).toFixed(2) }}%</p>
       </article>
       <article class="surface-card stat-card">
-        <h3>Всего непройденных проверок</h3>
+        <h3>{{ overviewTotalLabel }}</h3>
         <p>{{ Number(overview?.totalFailed || 0).toLocaleString('ru-RU') }}</p>
       </article>
       <article class="surface-card stat-card">
@@ -239,7 +284,7 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
     <section class="content-grid">
       <article class="surface-card">
         <div class="section-head">
-          <h2>Динамика нарушений по уровням severity</h2>
+          <h2>{{ trendTitle }}</h2>
           <span class="pill">{{ severityTrend.length }} точек</span>
         </div>
 
@@ -259,7 +304,7 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
 
       <article class="surface-card">
         <div class="section-head">
-          <h2>Динамика индекса защищенности</h2>
+          <h2>{{ scoreTitle }}</h2>
           <span class="pill">{{ scoreTrend.length }} точек</span>
         </div>
         <div class="table-wrap">
@@ -320,14 +365,17 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
 
       <article class="surface-card">
         <div class="section-head">
-          <h2>Топ-10 провальных правил</h2>
+          <h2>{{ topRulesTitle }}</h2>
         </div>
+        <p class="muted-block">
+          Детализация строится по ClickHouse и доступна примерно за последние 30 дней.
+        </p>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Правило</th>
-                <th>Непройдено</th>
+                <th>{{ isCve ? 'Уязвимость' : 'Правило' }}</th>
+                <th>{{ isCve ? 'Найдено' : 'Непройдено' }}</th>
                 <th>Сканов</th>
                 <th>Контейнеров</th>
               </tr>
@@ -351,14 +399,25 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
     <article class="surface-card muted-note">
       <h2>Отчеты</h2>
       <p>Сформируйте общий отчет или отчет по выбранному дашборду в формате PDF/CSV.</p>
+      <p v-if="!reportsAvailable" class="muted-block">Отчеты доступны только для CIS-аналитики.</p>
       <div class="report-grid">
         <div v-for="scope in reportScopes" :key="scope.value" class="report-row">
           <span>{{ scope.label }}</span>
           <div class="report-actions">
-            <button class="ghost-button" type="button" :disabled="reportLoading" @click="generateReport(scope.value, 'CSV')">
+            <button
+              class="ghost-button"
+              type="button"
+              :disabled="reportLoading || !reportsAvailable"
+              @click="generateReport(scope.value, 'CSV')"
+            >
               CSV
             </button>
-            <button class="primary-button" type="button" :disabled="reportLoading" @click="generateReport(scope.value, 'PDF')">
+            <button
+              class="primary-button"
+              type="button"
+              :disabled="reportLoading || !reportsAvailable"
+              @click="generateReport(scope.value, 'PDF')"
+            >
               PDF
             </button>
           </div>
