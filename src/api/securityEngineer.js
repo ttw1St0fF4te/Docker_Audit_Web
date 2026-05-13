@@ -141,6 +141,27 @@ export async function getCveTopRules(params = {}) {
 }
 
 export async function generateAnalyticsReport(payload) {
-  const { data } = await http.post(`${SECURITY_PREFIX}/analytics/reports/generate`, payload)
-  return data
+  const response = await http.post(`${SECURITY_PREFIX}/analytics/reports/generate`, payload, {
+    responseType: 'blob'
+  })
+  
+  const contentDisposition = response.headers['content-disposition']
+  let fileName = 'report'
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename="(.+)"/)
+    if (match) {
+      fileName = match[1]
+    }
+  }
+  
+  const blob = new Blob([response.data], { type: response.headers['content-type'] })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.setAttribute('download', fileName)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(link.href)
+  
+  return { success: true, fileName }
 }

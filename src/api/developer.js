@@ -22,8 +22,10 @@ export async function markAllNotificationsRead() {
   return data
 }
 
-export async function getScanViolations(scanId) {
-  const { data } = await http.get(`${DEVELOPER_PREFIX}/scans/${scanId}/violations`)
+export async function getScanViolations(scanId, scanType = 'CIS') {
+  const { data } = await http.get(`${DEVELOPER_PREFIX}/scans/${scanId}/violations`, {
+    params: { scanType }
+  })
   return data
 }
 

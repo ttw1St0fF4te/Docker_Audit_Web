@@ -53,7 +53,7 @@ const topHosts = ref([])
 const topRules = ref([])
 
 const isCve = computed(() => appliedScanType.value === 'CVE')
-const reportsAvailable = computed(() => appliedScanType.value === 'CIS')
+const reportsAvailable = computed(() => true)
 const overviewTotalLabel = computed(() => (isCve.value ? 'Всего уязвимостей' : 'Всего непройденных проверок'))
 const topRulesTitle = computed(() => (isCve.value ? 'Топ-10 уязвимостей' : 'Топ-10 провальных правил'))
 const trendTitle = computed(() => (isCve.value ? 'Динамика уязвимостей по severity' : 'Динамика нарушений по уровням severity'))
@@ -187,12 +187,13 @@ async function generateReport(scope, format) {
     const response = await generateAnalyticsReport({
       scope,
       format,
+      scanType: appliedScanType.value,
       from: buildParams().from,
       to: buildParams().to,
       bucket: buildParams().bucket,
       hostId: buildParams().hostId,
     })
-    reportResult.value = `Файл создан: ${response.savedPath}`
+    reportResult.value = `Отчет скачан: ${response.fileName}`
   } catch (requestError) {
     error.value = requestError.response?.data?.message || 'Не удалось сформировать отчет'
   } finally {
@@ -399,7 +400,7 @@ filters.from = toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
     <article class="surface-card muted-note">
       <h2>Отчеты</h2>
       <p>Сформируйте общий отчет или отчет по выбранному дашборду в формате PDF/CSV.</p>
-      <p v-if="!reportsAvailable" class="muted-block">Отчеты доступны только для CIS-аналитики.</p>
+      <p class="muted-block">Отчеты формируются по выбранному типу сканирования (CIS или CVE).</p>
       <div class="report-grid">
         <div v-for="scope in reportScopes" :key="scope.value" class="report-row">
           <span>{{ scope.label }}</span>

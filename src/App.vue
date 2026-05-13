@@ -82,7 +82,7 @@ function isRouteActive(path) {
 
     <footer class="site-footer">
       <div class="site-footer__inner">
-        <p>Курсовой проект: аудит Docker-инфраструктуры по CIS-проверкам.</p>
+        <p>NN2 Docker Audit — платформа аудита безопасности Docker-инфраструктуры</p>
         <p>2026 · Security Engineer UI</p>
       </div>
     </footer>

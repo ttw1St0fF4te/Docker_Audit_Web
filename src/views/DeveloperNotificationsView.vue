@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   getNotification,
   getScanViolations,
@@ -25,6 +25,17 @@ const success = ref('')
 const selectedNotification = ref(null)
 const selectedViolationDetails = ref(null)
 const selectedActionNotification = ref(null)
+
+const scanType = computed(() => selectedNotification.value?.scanType || 'CIS')
+const isCve = computed(() => scanType.value === 'CVE')
+
+const totalLabel = computed(() => (isCve.value ? 'Всего уязвимостей' : 'Всего нарушений'))
+const affectedLabel = computed(() => (isCve.value ? 'Затронуто образов' : 'Затронуто контейнеров'))
+const emptyLabel = computed(() =>
+  isCve.value
+    ? 'Детали уязвимостей недоступны для этого scanId.'
+    : 'Детальные нарушения недоступны для этого scanId.'
+)
 
 function formatDateTime(value) {
   if (!value) {
@@ -69,7 +80,7 @@ async function openDetails(item) {
       await loadNotifications()
     }
 
-    const scanData = await getScanViolations(detailed.scanId)
+    const scanData = await getScanViolations(detailed.scanId, detailed.scanType || 'CIS')
     selectedViolationDetails.value = scanData
   } catch (requestError) {
     error.value = requestError.response?.data?.message || 'Не удалось открыть детали уведомления'
@@ -186,6 +197,7 @@ onMounted(loadNotifications)
           <thead>
             <tr>
               <th>ID</th>
+              <th>Тип</th>
               <th>Создано</th>
               <th>Заголовок</th>
               <th>Summary</th>
@@ -197,6 +209,7 @@ onMounted(loadNotifications)
           <tbody>
             <tr v-for="item in notifications" :key="item.id">
               <td class="nowrap-cell">#{{ item.id }}</td>
+              <td class="nowrap-cell"><span class="pill">{{ item.scanType || 'CIS' }}</span></td>
               <td>{{ formatDateTime(item.createdAt) }}</td>
               <td>{{ item.title }}</td>
               <td>{{ notificationSummary(item) }}</td>
@@ -209,7 +222,7 @@ onMounted(loadNotifications)
               </td>
             </tr>
             <tr v-if="!notifications.length">
-              <td colspan="7" class="muted-cell">Для выбранного фильтра уведомлений нет.</td>
+              <td colspan="8" class="muted-cell">Для выбранного фильтра уведомлений нет.</td>
             </tr>
           </tbody>
         </table>
@@ -247,7 +260,7 @@ onMounted(loadNotifications)
       </div>
 
       <p class="muted-block">
-        scanId: #{{ selectedNotification.scanId }} · createdAt: {{ formatDateTime(selectedNotification.createdAt) }}
+        scanId: #{{ selectedNotification.scanId }} · Тип: {{ selectedNotification.scanType || 'CIS' }} · createdAt: {{ formatDateTime(selectedNotification.createdAt) }}
       </p>
       <p class="muted-block">{{ notificationSummary(selectedNotification) }}</p>
 
@@ -256,11 +269,11 @@ onMounted(loadNotifications)
       <template v-else-if="selectedViolationDetails">
         <div class="summary-grid">
           <div class="summary-item">
-            <span>Всего нарушений</span>
+            <span>{{ totalLabel }}</span>
             <strong>{{ selectedViolationDetails.summary?.totalViolations || 0 }}</strong>
           </div>
           <div class="summary-item">
-            <span>Затронуто контейнеров</span>
+            <span>{{ affectedLabel }}</span>
             <strong>{{ selectedViolationDetails.summary?.affectedContainers || 0 }}</strong>
           </div>
           <div class="summary-item">
@@ -278,15 +291,15 @@ onMounted(loadNotifications)
         </p>
 
         <div class="table-wrap">
-          <table class="data-table data-table--compact">
+          <table class="data-table data-table--compact details-table">
             <thead>
               <tr>
-                <th>Время</th>
-                <th>Хост</th>
-                <th>Контейнер</th>
-                <th>Rule</th>
-                <th>Severity</th>
-                <th>Рекомендация</th>
+                <th class="col-time">Время</th>
+                <th class="col-host">Хост</th>
+                <th class="col-container">{{ isCve ? 'Образ' : 'Контейнер' }}</th>
+                <th class="col-rule">{{ isCve ? 'Уязвимость' : 'Rule' }}</th>
+                <th class="col-severity">Severity</th>
+                <th class="col-advisory">{{ isCve ? 'Advisory' : 'Рекомендация' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -294,15 +307,15 @@ onMounted(loadNotifications)
                 v-for="(violation, idx) in selectedViolationDetails.violations || []"
                 :key="`${violation.hostId}-${violation.container}-${violation.ruleCode}-${idx}`"
               >
-                <td>{{ formatDateTime(violation.timestamp) }}</td>
-                <td>{{ violation.host }}</td>
-                <td>{{ violation.container }}</td>
-                <td>{{ violation.ruleCode }} · {{ violation.ruleTitle }}</td>
-                <td>{{ violation.severity }}</td>
-                <td>{{ violation.recommendation }}</td>
+                <td class="col-time">{{ formatDateTime(violation.timestamp) }}</td>
+                <td class="col-host">{{ violation.hostId }}</td>
+                <td class="col-container">{{ violation.container }}</td>
+                <td class="col-rule">{{ violation.ruleCode }} · {{ violation.ruleTitle }}</td>
+                <td class="col-severity">{{ violation.severity }}</td>
+                <td class="col-advisory">{{ violation.recommendation }}</td>
               </tr>
               <tr v-if="!(selectedViolationDetails.violations || []).length">
-                <td colspan="6" class="muted-cell">Детальные нарушения недоступны для этого scanId.</td>
+                <td colspan="6" class="muted-cell">{{ emptyLabel }}</td>
               </tr>
             </tbody>
           </table>
@@ -333,5 +346,44 @@ onMounted(loadNotifications)
 
 .nowrap-cell {
   white-space: nowrap;
+}
+
+.details-table th {
+  white-space: nowrap;
+}
+
+.details-table td {
+  vertical-align: top;
+}
+
+.details-table .col-time,
+.details-table .col-host,
+.details-table .col-severity {
+  white-space: nowrap;
+}
+
+.details-table .col-host {
+  text-align: center;
+  min-width: 40px;
+}
+
+.details-table .col-severity {
+  text-align: center;
+  min-width: 70px;
+}
+
+.details-table .col-rule,
+.details-table .col-advisory {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 180px;
+  max-width: 400px;
+}
+
+.details-table .col-container {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 100px;
+  max-width: 200px;
 }
 </style>
